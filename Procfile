@@ -1,1 +1,1 @@
-web gunicorn vamp:app
+web gunicorn app:app
