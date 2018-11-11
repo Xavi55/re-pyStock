@@ -10,9 +10,6 @@ import pygal
 from pygal.style import DarkStyle
 
 import re
-
-#import sent #other file
-
 class stock:
 	def __init__(self,name):
 		self.name=name
@@ -124,3 +121,36 @@ class stock:
 			array.append(i.text)
 		'''
 		return array
+	
+	def renderChart(self):
+		rate=""
+		convert = lambda x:x/x[0]
+		diff=datetime.today().year-1
+		start=datetime.today().replace(year=diff)#one year ago	
+		end=datetime.today()
+		x=self.name
+		comp=self.getComp()#retrieve competition
+		data=web.DataReader(str(x),'robinhood',start,end)##must uppercase stock tik?
+		debut=float(data['close_price'][0])#determine if stock has grown last year
+		fin=float(data['close_price'][-1])
+		
+		if fin > debut:
+			rate="grown"
+		else:
+			rate="fell"
+		
+		data=convert(data['close_price'].astype('float64'))
+		line_chart=pygal.Line(height=400,style=DarkStyle)
+		line_chart.title='Performance Since Last Year'
+		line_chart.x_title='Days'
+		line_chart.y_title='% Change'
+		line_chart.x_labels=data.reset_index()['begins_at']#label x-axis by dates
+		line_chart.add(x, data)
+		for i in comp:
+			try:
+				s=web.DataReader(str(i[0]),'robinhood',start,end)
+				s=convert(s['close_price'].astype('float64'))
+				line_chart.add(i[1],s)
+			except:
+				pass
+		return [line_chart.render_data_uri(),rate]

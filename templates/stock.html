@@ -3,7 +3,6 @@
 	<head>
 		<title>stockAdviser</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-
 		<link type="text/css" rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 	</head>
 	<style>
@@ -91,7 +90,7 @@
 			.kill
 			{
 				float: right;
-				font-size: 1em;
+				font-size: 1.2em;
 			}
 			.kill:active
 			{
@@ -228,20 +227,16 @@
 		</div>
 	</body>
 	<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
-
-	<!---
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
-
--->
 	<script type=text/javascript>
 	//time check :
+	var on=0;
 	var hour = new Date().getHours();
 	var day = new Date().getDay();
 	var minute = new Date().getMinutes();
 	if( (day!=6 && day!=0) && ((hour+(minute/100))>9.3 && hour<=15 ) )
 	{
 		$('.time').append('<h4>Stocks are open until 4:00PM EST.</h4>');
+		on=1;
 	}
 	else if(day==6 || day ==0)
 	{
@@ -259,80 +254,65 @@
 	}
 
 	var proc = {};
-
 	$('.s').on('keyup',function(e)
+	{
+		//e.preventDefault();
+		if(e.keyCode==13)
 		{
-			//e.preventDefault();
-			if(e.keyCode==13)
-			{
-				var s =$('#stock').val();
-				$('#stock').val('');
-				if(s=='')
-					alert('Please enter stock symbol');
-				else if($('#'+s.toUpperCase()).length)
-					alert('Stock already exists');
-				else
-				{	
-					$.get('/api/getStock',{'stock':s},function(data)
+			var s =$('#stock').val().toUpperCase();
+			$('#stock').val('');
+			if(s=='')
+				alert('Please enter stock symbol');
+			else if($('#'+s.toUpperCase()).length)
+				alert('Stock already exists');
+			else
+			{	
+				$.get('/api/getStock',{'stock':s},function(data)
+				{
+					var tik=data.n.split(' ')[0];
+					$('.box').append('<div id='+tik+' class=data><h4 class=name>'+data.n+'<span class=kill onclick=kill('+tik+')>❌</span></h4><h4 class=price id='+tik+'price>Price: $'+data.p+'</h4><h4 class=open>Open: $'+data.op+'</h4><h4 class=percent>Change: <span class=p id='+tik+'diff>'+data.diff+'</span></h4><h4 class=mcap>Market Cap: $'+data.cap+'</h4><h4 class=eps>Earnings/Share: $'+data.eps+'</h4><h4 class=pe>P/E: '+data.pe+'</h4><h4 class=de>Debt/Equity: '+data.de+'</h4><h4 class=pb>Book Value: '+data.pb+'</h4><div class=chart id='+tik+'chart style=display:none></div><br><br><h4 class=show onclick=show('+tik+'chart);>Show Competition</h4> <div id='+tik+'sent class=sent style=display:none><h3 class=center>News Sentiment</h3><br><div><h4 class="center" style="float:left;width:50%;">Good</h4><h4 class="center" style="float:left;width:50%;">Bad</h4><br><br></div></div><h4 class=show onclick=show('+tik+'sent)>Show Sentiment</h4><h4 class=rating id='+tik+'rating></h4></div>');
+					$.get('/api/getChart',{'stock':s},function(x)
 					{
-						var tik=data.n.split(' ')[0];
-						$('.box').append('<div id='+tik+' class=data><h4 class=name>'+data.n+'<span class=kill onclick=kill('+tik+')>❌</span></h4><h4 class=price id='+tik+'price>Price: $'+data.p+'</h4><h4 class=open>Open: $'+data.op+'</h4><h4 class=percent>Change: <span class=p id='+tik+'diff>'+data.diff+'</span></h4><h4 class=mcap>Market Cap: $'+data.cap+'</h4><h4 class=eps>Earnings/Share: $'+data.eps+'</h4><h4 class=pe>P/E: '+data.pe+'</h4><h4 class=de>Debt/Equity: '+data.de+'</h4><h4 class=pb>Book Value: '+data.pb+'</h4><div class=chart id='+tik+'chart style=display:none></div><br><br><h4 class=show onclick=show('+tik+'chart);>Show Competition</h4> <div id='+tik+'sent class=sent style=display:none><h3 class=center>News Sentiment</h3><br><div><h4 class="center" style="float:left;width:50%;">Good</h4><h4 class="center" style="float:left;width:50%;">Bad</h4><br><br></div></div><h4 class=show onclick=show('+tik+'sent)>Show Sentiment</h4><h4 class=rating id='+tik+'rating></h4></div>');
-						proc[tik] = setInterval(function(){updateP(tik)},5000);
-					});				
-				}	//socket.emit('get',{sym:s});
+						$('#'+x.n+'chart').append('<embed type=image/svg+xml src='+x.chart+'>');
+						$('#'+x.n+'rating').append('Perfomance has '+x.perf+' and ');
+					});
+					$.get('/api/getSent',{'stock':s},function(feels)
+					{
+						$('#'+feels.n+'rating').append('seems to have '+feels.sent[4]+' news.');
+						for(var i=0; i<4;i++)
+						{
+							if(feels.sent[i][0]=='')
+							{
+								$('#'+feels.n+'sent').append('<div class="col"><p class=center>-No good news found-</p></div>');
+								if(feels.sent[i][1]=='')
+								{
+									$('#'+feels.n+'sent').append('<div class="col"><p class=center>-No bad news found-</p></div><div style="clear:both;"></div><h3 class=center><a href='+feels.sent[i][2]+' target=_blank>Source</a></h3><br><br>')
+								}
+								else
+								{
+									$('#'+feels.n+'sent').append('<div class="col"><p>'+feels.sent[i][1]+'</p></div><div style="clear:both;"></div><h3 class=center><a href='+feels.sent[i][2]+' target=_blank>Source</a></h3><br><br>');
+								}
+							}
+							else
+								$('#'+feels.n+'sent').append('<div class="col"><p>'+feels.sent[i][0]+'</p></div><div class="col"><p>'+feels.sent[i][1]+'</p></div><div style="clear:both;"></div><h3 class=center><a href='+feels.sent[i][2]+' target=_blank>Source</a></h3><br><br>')
+						}
+					});
+					if(on)//don't update price after hours
+						proc[tik] = setInterval(function(){updateP(tik)},9000);
+				});	
 			}
-		});
-		function kill(stock)//free/delete 'proc'
-		{
-			$('#'+stock.id).remove();
-			window.clearInterval(proc[stock.id]);
 		}
-		function updateP(sName)
+	});
+	function kill(stock)//free/delete 'proc'
+	{
+		$('#'+stock.id).remove();
+		window.clearInterval(proc[stock.id]);
+	}
+	function updateP(sName)
+	{
+		$.get('/api/fetchP',{'stock':sName},function(x)
 		{
-			$.get('/api/fetchP',{'stock':sName},function(x)
-			{
-				$('#'+x.n+'price').text('Price: $'+x.p)//Math.round(x.p*100)/100);
-				$('#'+x.n+'diff').text(x.diff);
-				//console.log('12345');
-				//console.log(x.diff);
-				if(x.diff[2]==='-')
-					$('#'+x.n+'diff').css('color','red');
-				else
-					$('#'+x.n+'diff').css('color','#00ff61');
-			});
-			console.log(sName+' was Updated');
-		}
-/*
-	var socket = io.connect('localhost:5000');
-
-
-		
-
-		socket.on('reply',function(data)
-		{
-			console.log('added '+data);
-			var tik=data.n.split(' ')[0];
-			//console.log(tik);
-			$('.box').append('<div class=data><h4 class=name>'+data.n+'</h4><h4 class=price id='+tik+'price>Price: $'+data.p+'</h4><h4 class=open>Open: $'+data.op+'</h4><h4 class=percent>Change: <span class=p id='+tik+'diff>'+data.diff+'</span></h4><h4 class=mcap>Market Cap: $'+data.cap+'</h4><h4 class=eps>Earnings/Share: $'+data.eps+'</h4><h4 class=pe>P/E: '+data.pe+'</h4><h4 class=de>Debt/Equity: '+data.de+'</h4><h4 class=pb>Book Value: '+data.pb+'</h4><div class=chart id='+tik+'chart style=display:none></div><br><br><h4 class=show onclick=show('+tik+'chart);>Show Competition</h4> <div id='+tik+'sent class=sent style=display:none><h3 class=center>News Sentiment</h3><br><div><h4 class="center" style="float:left;width:50%;">Good</h4><h4 class="center" style="float:left;width:50%;">Bad</h4><br><br></div></div><h4 class=show onclick=show('+tik+'sent)>Show Sentiment</h4><h4 class=rating id='+tik+'rating></h4></div>');
-			//ROUNDING Math.round(data.p*100)/100
-			socket.emit('fin',{sym:tik});
-			socket.emit('chart',{sym:tik});
-
-			socket.emit('sentiment',{sym:tik});
-
-			n = setInterval(function(){updateP(tik)},11000);
-			//^should i use assoc.arrays to clear/delete this interval obj in the future?
-		});
-
-		function updateP(sName)
-		{
-			console.log(sName+' is Updated')
-			//var x = sName.split(' ')[0];
-			socket.emit('fetch',{sym:sName});
-		}
-		socket.on('update',function(x)
-		{
-			$('#'+x.n+'price').text('Price: $'+x.p)//Math.round(x.p*100)/100);
+			$('#'+x.n+'price').text('Price: $'+x.p);//Math.round(x.p*100)/100);
 			$('#'+x.n+'diff').text(x.diff);
 			//console.log('12345');
 			//console.log(x.diff);
@@ -341,79 +321,29 @@
 			else
 				$('#'+x.n+'diff').css('color','#00ff61');
 		});
-
-		socket.on('paste',function(x)
-		{
-			$('#'+x.n+'chart').append('<embed type=image/svg+xml src='+x.chart+'>')
-			$('#'+x.n+'rating').append('Perfomance has '+x.perf+' and ');
-		});
-
-		socket.on('sent',function(x)
-		{
-			console.log(x.data[0][0]);
-			console.log('new sentiment data/news added');
-			//alert('new data');
-			console.log(x.data);
-
-			$('#'+x.n+'rating').append('seems to have '+x.data[4]+' news.')
-			//x.data[4]="";
-
-				//$.each(x.data,function (i)
-				for(var i=0; i<4;i++)
-				{
-					if (x.data[i][0]=='')//searching for an 'undefined' array didn't work the first time
-					{
-						$('#'+x.n+'sent').append('<div class="col"><p class=center>-No good news found-</p></div>')
-
-						if(x.data[i][1]=='')
-						{
-							$('#'+x.n+'sent').append('<div class="col"><p class=center>-No bad news found-</p></div><div style="clear:both;"></div><h3 class=center><a href='+x.data[i][2]+' target=_blank>Source</a></h3><br><br>')
-						}
-						else
-						{
-							$('#'+x.n+'sent').append('<div class="col"><p>'+x.data[i][1]+'</p></div><div style="clear:both;"></div><h3 class=center><a href='+x.data[i][2]+' target=_blank>Source</a></h3><br><br>')
-						}
-					}
-					else
-					{
-						$('#'+x.n+'sent').append('<div class="col"><p>'+x.data[i][0]+'</p></div><div class="col"><p>'+x.data[i][1]+'</p></div><div style="clear:both;"></div><h3 class=center><a href='+x.data[i][2]+' target=_blank>Source</a></h3><br><br>')
-					}
-					//console.log('good :'+x.data[i][0]);
-					//console.log('bad :'+x.data[i][1]);
-					//console.log('link :'+x.data[i][2]);
-				}//);
-		});
-
-	function exam()
-	{
-		$('.modal').css('display','block')
+		console.log(sName+' was Updated');
 	}
 
 	function show(elem)
 	{
-		var $data=$(elem).clone()
-		$('.modal').append($data)
-		$($data).css('display','block')
-		$('.modal').css('display','block')
-	}//difficult
-	//cannot add events to dynamically made DOM/elemnts
-	//supposedly they don't exist!
-
+		var $data=$(elem).clone();
+		$('.modal').append($data);
+		$($data).css('display','block');
+		$('.modal').css('display','block');
+	}
 	$(document).keyup(function(e)
 	{
-		if(e.which==27) close()
+		if(e.which==27) close();
 	})
 	$('#close').click(function(){
-		close()
+		close();
 	})
 	function close()
 	{
-		$('.modal .sent').remove()//remove news sentiment
-		$('.modal .chart').remove()//remove any chart on modal
+		$('.modal .sent').remove();//remove news sentiment
+		$('.modal .chart').remove();//remove any chart on modal
 		//$('.modal').children().last().remove();
-		$('.modal').css('display','none')
+		$('.modal').css('display','none');
 	}
-	*/
-		//API KEY for Alpha Vantage EOQA5AGR365JSWES
 	</script>
 </html>
